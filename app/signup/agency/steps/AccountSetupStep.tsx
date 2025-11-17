@@ -1,11 +1,51 @@
 'use client'
 
 import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useSignupStore } from '@/lib/stores/signupStore'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ValidatedInput } from '@/components/signup/ValidatedInput'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+
+// Validation functions
+const validateEmail = (email: string) => {
+  if (!email) return { valid: false, message: 'Email is required' }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { valid: false, message: 'Invalid email address' }
+  }
+  return { valid: true, message: 'Email looks good!' }
+}
+
+const validatePassword = (password: string) => {
+  if (!password) return { valid: false, message: 'Password is required' }
+  if (password.length < 8) {
+    return { valid: false, message: 'Password must be at least 8 characters' }
+  }
+  if (!/(?=.*[a-z])/.test(password)) {
+    return { valid: false, message: 'Must include lowercase letter' }
+  }
+  if (!/(?=.*[A-Z])/.test(password)) {
+    return { valid: false, message: 'Must include uppercase letter' }
+  }
+  if (!/(?=.*\d)/.test(password)) {
+    return { valid: false, message: 'Must include a number' }
+  }
+  if (!/(?=.*[@$!%*?&])/.test(password)) {
+    return { valid: false, message: 'Must include special character (@$!%*?&)' }
+  }
+  return { valid: true, message: 'Strong password!' }
+}
+
+const validateName = (name: string, field: string) => {
+  if (!name || !name.trim()) {
+    return { valid: false, message: `${field} is required` }
+  }
+  if (name.trim().length < 2) {
+    return { valid: false, message: `${field} must be at least 2 characters` }
+  }
+  return { valid: true }
+}
 
 export function AccountSetupStep() {
   const { accountSetup, setAccountSetup, goToNextStep } = useSignupStore()
@@ -21,164 +61,142 @@ export function AccountSetupStep() {
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email address'
+  const validateConfirmPassword = (confirmPassword: string) => {
+    if (!confirmPassword) {
+      return { valid: false, message: 'Please confirm your password' }
     }
-
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required'
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters'
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(formData.password)) {
-      newErrors.password = 'Password must include uppercase, lowercase, number, and special character'
+    if (confirmPassword !== formData.password) {
+      return { valid: false, message: 'Passwords do not match' }
     }
+    return { valid: true, message: 'Passwords match!' }
+  }
 
-    // Confirm password
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
-    }
-
-    // Name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required'
-    }
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required'
-    }
-
-    // Terms acceptance
-    if (!formData.termsAccepted) {
-      newErrors.terms = 'You must accept the terms and conditions'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  const canContinue = () => {
+    return (
+      validateEmail(formData.email).valid &&
+      validatePassword(formData.password).valid &&
+      validateConfirmPassword(formData.confirmPassword).valid &&
+      validateName(formData.firstName, 'First name').valid &&
+      validateName(formData.lastName, 'Last name').valid &&
+      formData.termsAccepted
+    )
   }
 
   const handleContinue = () => {
-    if (validate()) {
+    if (canContinue()) {
+      setIsSubmitting(true)
       // Save to store (client-side only)
       setAccountSetup(formData)
-      // Go to next step
-      goToNextStep()
+
+      // Simulate async operation
+      setTimeout(() => {
+        setIsSubmitting(false)
+        // Go to next step
+        goToNextStep()
+      }, 800)
     }
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.1 }}
+    >
       {/* Email */}
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-          Email Address *
-        </label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className={errors.email ? 'border-red-500' : ''}
-        />
-        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-      </div>
+      <ValidatedInput
+        id="email"
+        type="email"
+        label="Email Address"
+        placeholder="you@example.com"
+        value={formData.email}
+        onChange={(value) => setFormData({ ...formData, email: value })}
+        validate={validateEmail}
+        required
+        autoComplete="email"
+      />
 
       {/* First Name & Last Name */}
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-            First Name *
-          </label>
-          <Input
-            id="firstName"
-            type="text"
-            placeholder="John"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-            className={errors.firstName ? 'border-red-500' : ''}
-          />
-          {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
-        </div>
+        <ValidatedInput
+          id="firstName"
+          type="text"
+          label="First Name"
+          placeholder="John"
+          value={formData.firstName}
+          onChange={(value) => setFormData({ ...formData, firstName: value })}
+          validate={(v) => validateName(v, 'First name')}
+          required
+          autoComplete="given-name"
+        />
 
-        <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-            Last Name *
-          </label>
-          <Input
-            id="lastName"
-            type="text"
-            placeholder="Doe"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            className={errors.lastName ? 'border-red-500' : ''}
-          />
-          {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
-        </div>
+        <ValidatedInput
+          id="lastName"
+          type="text"
+          label="Last Name"
+          placeholder="Doe"
+          value={formData.lastName}
+          onChange={(value) => setFormData({ ...formData, lastName: value })}
+          validate={(v) => validateName(v, 'Last name')}
+          required
+          autoComplete="family-name"
+        />
       </div>
 
       {/* Password */}
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-          Password *
-        </label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="••••••••"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
-        <p className="mt-1 text-xs text-gray-500">
-          Must be 8+ characters with uppercase, lowercase, number, and special character
-        </p>
-      </div>
+      <ValidatedInput
+        id="password"
+        type={showPassword ? 'text' : 'password'}
+        label="Password"
+        placeholder="••••••••"
+        value={formData.password}
+        onChange={(value) => setFormData({ ...formData, password: value })}
+        validate={validatePassword}
+        required
+        hint="Must be 8+ characters with uppercase, lowercase, number, and special character"
+        autoComplete="new-password"
+        className={showPassword ? 'pr-10' : 'pr-10'}
+      >
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </ValidatedInput>
 
       {/* Confirm Password */}
-      <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-          Confirm Password *
-        </label>
-        <div className="relative">
-          <Input
-            id="confirmPassword"
-            type={showConfirmPassword ? 'text' : 'password'}
-            placeholder="••••••••"
-            value={formData.confirmPassword}
-            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-            className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-          >
-            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-        {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
-      </div>
+      <ValidatedInput
+        id="confirmPassword"
+        type={showConfirmPassword ? 'text' : 'password'}
+        label="Confirm Password"
+        placeholder="••••••••"
+        value={formData.confirmPassword}
+        onChange={(value) => setFormData({ ...formData, confirmPassword: value })}
+        validate={validateConfirmPassword}
+        required
+        autoComplete="new-password"
+        className={showConfirmPassword ? 'pr-10' : 'pr-10'}
+      >
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </ValidatedInput>
 
       {/* Terms Acceptance */}
-      <div className="flex items-start space-x-3">
+      <motion.div
+        className="flex items-start space-x-3 p-4 rounded-lg border border-gray-200 bg-gray-50"
+        whileHover={{ borderColor: 'rgb(59, 130, 246)' }}
+        transition={{ duration: 0.2 }}
+      >
         <Checkbox
           id="terms"
           checked={formData.termsAccepted}
@@ -186,36 +204,55 @@ export function AccountSetupStep() {
         />
         <label htmlFor="terms" className="text-sm text-gray-700 leading-tight cursor-pointer">
           I agree to the{' '}
-          <a href="/terms" target="_blank" className="text-primary hover:underline">
+          <a href="/terms" target="_blank" className="text-blue-600 hover:underline font-medium">
             Terms of Service
           </a>{' '}
           and{' '}
-          <a href="/privacy" target="_blank" className="text-primary hover:underline">
+          <a href="/privacy" target="_blank" className="text-blue-600 hover:underline font-medium">
             Privacy Policy
           </a>
         </label>
-      </div>
-      {errors.terms && <p className="text-sm text-red-600">{errors.terms}</p>}
+      </motion.div>
 
       {/* Continue Button */}
       <div className="pt-4">
         <Button
           onClick={handleContinue}
           size="lg"
-          className="w-full"
+          className="w-full relative overflow-hidden group"
+          disabled={!canContinue() || isSubmitting}
         >
-          Continue
-          <ArrowRight className="ml-2 h-4 w-4" />
+          {isSubmitting ? (
+            <>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+              />
+              <span className="ml-2">Processing...</span>
+            </>
+          ) : (
+            <>
+              <span>Continue</span>
+              <motion.div
+                className="ml-2"
+                animate={{ x: [0, 4, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <ArrowRight className="h-4 w-4" />
+              </motion.div>
+            </>
+          )}
         </Button>
       </div>
 
       {/* Already have account */}
       <div className="text-center text-sm text-gray-600">
         Already have an account?{' '}
-        <a href="/login" className="text-primary hover:underline font-medium">
+        <a href="/login" className="text-blue-600 hover:underline font-medium">
           Sign in
         </a>
       </div>
-    </div>
+    </motion.div>
   )
 }
