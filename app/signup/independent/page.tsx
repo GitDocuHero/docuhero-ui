@@ -2,9 +2,9 @@
 
 import { useSignupStore } from '@/lib/stores/signupStore'
 import { MultiStepLayout } from '@/components/signup/MultiStepLayout'
-import { AccountSetupStep } from '../../agency/steps/AccountSetupStep'
+import { AccountSetupStep } from '@/app/signup/agency/steps/AccountSetupStep'
 import { SoloPracticeStep } from './steps/SoloPracticeStep'
-import { MFAStep } from '../../agency/steps/MFAStep'
+import { MFAStep } from '@/app/signup/agency/steps/MFAStep'
 
 export default function IndependentProviderSignupPage() {
   const { currentStep, setCurrentStep, goToPreviousStep } = useSignupStore()
