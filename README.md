@@ -2,6 +2,8 @@
 
 Clean rebuild of the DocuHero healthcare documentation platform.
 
+**Security Note:** Public access has been removed for HIPAA compliance. Authentication required.
+
 ## Getting Started
 
 ```bash
