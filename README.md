@@ -50,3 +50,4 @@ frontend/
 - SRS-driven development
 - 6 user personas supported
 - Mobile-first PWA approach
+# Trigger deployment
